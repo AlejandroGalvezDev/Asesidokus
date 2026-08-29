@@ -18,6 +18,43 @@
   };
   const ADJ_BADGE = { diagonal8: "Regla especial: diagonales", knight: "Regla especial: movimiento de caballo" };
 
+  const PORTRAIT_ASSETS = [
+    "assets/portraits/portrait-01.png",
+    "assets/portraits/portrait-02.png",
+    "assets/portraits/portrait-03.png",
+    "assets/portraits/portrait-04.png",
+    "assets/portraits/portrait-05.png",
+    "assets/portraits/reference_portrait.png",
+  ];
+  const FURNITURE_ASSETS = {
+    cama: "assets/furniture/bed.png",
+    hamaca: "assets/furniture/bed.png",
+    planta: "assets/furniture/plant.png",
+    mesa: "assets/furniture/table.png",
+    "mesa larga": "assets/furniture/table.png",
+    tv: "assets/furniture/tv.png",
+    alfombra: "assets/furniture/rug.png",
+    silla: "assets/furniture/reference_furniture.png",
+    sofá: "assets/furniture/reference_furniture.png",
+    sofa: "assets/furniture/reference_furniture.png",
+  };
+
+  function portraitFor(personIdx) {
+    return PORTRAIT_ASSETS[Math.abs(personIdx) % PORTRAIT_ASSETS.length];
+  }
+  function furnitureAssetFor(furniture) {
+    const label = String(furniture.label || "").toLowerCase();
+    const exact = FURNITURE_ASSETS[label];
+    if (exact) return exact;
+    if (label.includes("planta")) return FURNITURE_ASSETS.planta;
+    if (label.includes("alfombra")) return FURNITURE_ASSETS.alfombra;
+    if (label.includes("mesa")) return FURNITURE_ASSETS.mesa;
+    if (label.includes("cama") || label.includes("hamaca") || label.includes("camilla")) return FURNITURE_ASSETS.cama;
+    if (label.includes("silla") || label.includes("banco") || label.includes("puf") || label.includes("sofá") || label.includes("sofa")) return FURNITURE_ASSETS.silla;
+    if (label === "tv") return FURNITURE_ASSETS.tv;
+    return null;
+  }
+
   const els = {};
   const state = {
     view: "picker",
@@ -188,14 +225,17 @@
   function renderGame() {
     const puzzle = currentActivePuzzle();
     els.root.innerHTML = "";
-    els.root.appendChild(buildHeader(true));
 
-    const game = el("div", { class: "game" });
-    game.appendChild(buildCasePanel(puzzle));
-    game.appendChild(buildScenePanel(puzzle));
-    els.root.appendChild(game);
+    const shell = el("div", { class: "play-shell" });
+    const suspectRail = el("aside", { class: "suspect-rail", "aria-label": "Panel de sospechosos" });
+    suspectRail.appendChild(buildHeader(true));
+    suspectRail.appendChild(buildCasePanel(puzzle));
+    shell.appendChild(suspectRail);
+    shell.appendChild(buildScenePanel(puzzle));
+    shell.appendChild(buildToolRail());
+
+    els.root.appendChild(shell);
     els.root.appendChild(buildFooter());
-
     refreshBoardState();
   }
 
@@ -211,10 +251,35 @@
         el("div", { class: "brand-badge" }, ["M"]),
         el("div", {}, [
           el("p", { class: "brand-title" }, ["MURDOKU"]),
-          el("p", { class: "brand-sub" }, ["Casos procedurales · una única solución garantizada"]),
+          el("p", { class: "brand-sub" }, [inGame ? "por Manuel Garand" : "Casos procedurales · una única solución garantizada"]),
         ]),
       ]),
       el("div", { class: "header-actions" }, actions),
+    ]);
+  }
+
+  function buildToolRail() {
+    return el("aside", { class: "tool-rail", "aria-label": "Herramientas del caso" }, [
+      el("div", { class: "tool-rail-top" }, [
+        el("span", { class: "tool-label" }, ["Herramientas"]),
+        el("button", { class: "tool-button tool-danger", title: "Vaciar tablero", "aria-label": "Vaciar tablero", onclick: onResetPlacements }, ["×"]),
+        el("button", { class: "tool-button tool-eraser", title: "Borrar una ficha", "aria-label": "Borrar una ficha", onclick: () => { state.armed = null; toast("Selecciona una ficha colocada para moverla o retirarla."); } }, ["⌫", el("small", {}, ["mantén para borrar todo"]) ]),
+        el("button", { class: "tool-button tool-muted", disabled: "true", title: "Deshacer", "aria-label": "Deshacer" }, ["DESHACER"]),
+      ]),
+      el("div", { class: "tool-rail-bottom" }, [
+        el("button", { class: "tool-button tool-hint", onclick: onHint }, ["💡 Pista"]),
+        el("button", { class: "tool-button tool-muted tool-send", disabled: "true" }, ["ENVIAR", el("small", {}, ["(coloca a todos primero"]) ]),
+        el("button", { class: "tool-button tool-help", onclick: () => toast("Selecciona un sospechoso y después una casilla del tablero.") }, ["CÓMO JUGAR"]),
+        el("div", { class: "tool-icon-row" }, [
+          el("button", { class: "tool-square", title: "Ayuda", "aria-label": "Ayuda", onclick: () => toast("Una persona por fila, una por columna.") }, ["?"]),
+          el("button", { class: "tool-square", title: "Comprobar", "aria-label": "Comprobar", onclick: onCheck }, ["↗"]),
+          el("button", { class: "tool-square", title: "Revelar solución", "aria-label": "Revelar solución", onclick: onReveal }, ["▣"]),
+        ]),
+        el("div", { class: "tool-icon-row" }, [
+          el("button", { class: "tool-square", title: "Silenciar", "aria-label": "Silenciar", onclick: () => toast("No hay sonidos activos en esta versión.") }, ["⌁"]),
+          el("button", { class: "tool-square", title: "Ajustes", "aria-label": "Ajustes", onclick: () => toast("Ajustes visuales disponibles próximamente.") }, ["⚙"]),
+        ]),
+      ]),
     ]);
   }
 
@@ -301,23 +366,36 @@
       class: classes.join(" "),
       style: `--tilt:${tilt}deg`,
       "data-person": person.personIdx,
+      "data-gender": person.gender || "",
       onclick: () => onArmSuspect(person.personIdx),
     }, [
-      el("div", { class: "name-row" }, [
-        el("span", { class: "name" }, [person.name]),
-        el("span", { class: "token" }, [placed ? cellLabel(getPlacements().get(person.personIdx)) : "sin ubicar"]),
+      el("div", { class: "suspect-portrait" }, [
+        el("img", { src: portraitFor(person.personIdx), alt: `Retrato de ${person.name}`, loading: "lazy" }),
+        el("span", { class: "gender-badge", "aria-label": person.gender === "f" ? "Mujer" : "Hombre" }, [person.gender === "f" ? "♀" : "♂"]),
       ]),
-      el("p", { class: "clue" }, [M.clueTextFor(puzzle, person)]),
+      el("div", { class: "suspect-info" }, [
+        el("div", { class: "name-row" }, [
+          el("span", { class: "name" }, [person.name]),
+          el("span", { class: "token" }, [placed ? cellLabel(getPlacements().get(person.personIdx)) : "sin ubicar"]),
+        ]),
+        el("p", { class: "clue" }, [M.clueTextFor(puzzle, person)]),
+      ]),
     ]);
   }
 
   function victimCard(puzzle, victim) {
-    return el("div", { class: "suspect-card", style: "cursor:default; --tilt:1deg" }, [
-      el("div", { class: "name-row" }, [
-        el("span", { class: "name" }, [victim.name]),
-        el("span", { class: "victim-tag" }, ["Víctima"]),
+    return el("div", { class: "suspect-card victim-card", style: "cursor:default; --tilt:1deg", "data-gender": victim.gender || "" }, [
+      el("div", { class: "suspect-portrait" }, [
+        el("img", { src: portraitFor(victim.personIdx), alt: `Retrato de ${victim.name}`, loading: "lazy" }),
+        el("span", { class: "gender-badge", "aria-label": victim.gender === "f" ? "Mujer" : "Hombre" }, [victim.gender === "f" ? "♀" : "♂"]),
       ]),
-      el("p", { class: "clue" }, [M.clueTextFor(puzzle, victim)]),
+      el("div", { class: "suspect-info" }, [
+        el("div", { class: "name-row" }, [
+          el("span", { class: "name" }, [victim.name]),
+          el("span", { class: "victim-tag" }, ["Víctima"]),
+        ]),
+        el("p", { class: "clue" }, [M.clueTextFor(puzzle, victim)]),
+      ]),
     ]);
   }
 
@@ -358,11 +436,17 @@
 
         const cellEl = el("div", {
           class: cellClasses.join(" "),
-          "data-r": r, "data-c": c,
+          "data-r": r, "data-c": c, "data-room": room,
           title: furn ? furn.label : "",
           onclick: () => onCellClick(r, c),
         });
-        if (furn) cellEl.appendChild(el("span", { class: "furniture-icon" }, [furn.icon]));
+        if (furn) {
+          const asset = furnitureAssetFor(furn);
+          const icon = el("span", { class: `furniture-icon${asset ? " has-asset" : ""}` }, asset
+            ? [el("img", { src: `${asset}?v=2`, alt: furn.label, loading: "lazy" })]
+            : [furn.icon]);
+          cellEl.appendChild(icon);
+        }
         board.appendChild(cellEl);
       }
     }
