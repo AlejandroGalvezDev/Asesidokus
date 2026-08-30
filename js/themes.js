@@ -33,7 +33,7 @@
   THEMES.push({
     id: "clasico",
     name: "La Primera Noche",
-    tagline: "El caso ideal para aprender las reglas de Murdoku.",
+    tagline: "El caso ideal para aprender las reglas de Asesidoku.",
     intro: "¡Alguien fue asesinado anoche! Coloca a cada sospechoso en la escena del crimen para descubrir quién estaba solo con la víctima.",
     rooms: ["Salón", "Dormitorio Principal", "Habitación de Invitados", "Comedor", "Cocina", "Baño", "Despacho", "Recibidor"],
     furniture: [
@@ -271,7 +271,7 @@
   });
 
   // ------------------------------------------------------------
-  // 11. Doble Murdoku (double-murdoku) — dos escenas ligadas: hay que
+  // 11. Doble Asesidoku (double-murdoku) — dos escenas ligadas: hay que
   //     resolver ambas para cerrar el caso. (isDouble se maneja en main.js)
   // ------------------------------------------------------------
   THEMES.push({

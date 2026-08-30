@@ -1,7 +1,7 @@
 {
-  "name": "murdoku",
+  "name": "asesidoku",
   "version": "1.0.0",
-  "description": "Murdoku: casos de misterio tipo sudoku generados de forma procedural, con solución única garantizada.",
+  "description": "Asesidoku: casos de misterio tipo sudoku generados de forma procedural, con solución única garantizada.",
   "main": "index.html",
   "scripts": {
     "test": "node test/verify.js && node test/smoke.js && node test/solve.js && node test/extra.js",
@@ -9,7 +9,7 @@
     "serve": "python3 -m http.server 8080"
   },
   "keywords": [
-    "murdoku",
+    "asesidoku",
     "sudoku",
     "logic-puzzle",
     "murder-mystery",

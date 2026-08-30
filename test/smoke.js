@@ -39,7 +39,7 @@ async function run() {
   };
 
   const doc = window.document;
-  assert(doc.querySelector(".picker-hero h1").textContent.includes("MURDOKU"), "la pantalla de inicio se renderiza");
+  assert(doc.querySelector(".picker-hero h1").textContent.includes("ASESIDOKU"), "la pantalla de inicio se renderiza");
   assert(doc.querySelectorAll(".theme-card").length >= 14, "hay al menos 14 tarjetas de caso");
 
   // elegir dificultad "facil" para un tablero pequeño y rápido de resolver

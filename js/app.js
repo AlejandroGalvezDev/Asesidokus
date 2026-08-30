@@ -138,7 +138,7 @@
 
     const wrap = el("div", { class: "picker" }, [
       el("div", { class: "picker-hero" }, [
-        el("h1", {}, ["MURDOKU"]),
+        el("h1", {}, ["ASESIDOKU"]),
         el("p", {}, [
           "Coloca a cada sospechoso en la escena del crimen usando lógica pura: una persona por fila, una por columna. ",
           "Quien comparta habitación con la víctima es el asesino. Cada caso se genera al momento y tiene una única solución posible.",
@@ -248,9 +248,9 @@
     }
     return el("header", { class: "app-header" }, [
       el("div", { class: "brand", onclick: renderPicker, style: "cursor:pointer" }, [
-        el("div", { class: "brand-badge" }, ["M"]),
+        el("div", { class: "brand-badge" }, ["A"]),
         el("div", {}, [
-          el("p", { class: "brand-title" }, ["MURDOKU"]),
+          el("p", { class: "brand-title" }, ["ASESIDOKU"]),
           el("p", { class: "brand-sub" }, [inGame ? "por Manuel Garand" : "Casos procedurales · una única solución garantizada"]),
         ]),
       ]),
@@ -722,7 +722,7 @@
 
   function buildFooter() {
     return el("footer", { class: "app-footer" }, [
-      "Murdoku — casos generados de forma procedural, cada uno con solución única verificada. Inspirado en el formato de murder-mystery logic puzzles de Manuel Garand.",
+      "Asesidoku — casos generados de forma procedural, cada uno con solución única verificada. Inspirado en el formato de los rompecabezas de misterio lógico.",
     ]);
   }
 
