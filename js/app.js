@@ -251,7 +251,7 @@
         el("div", { class: "brand-badge" }, ["A"]),
         el("div", {}, [
           el("p", { class: "brand-title" }, ["ASESIDOKU"]),
-          el("p", { class: "brand-sub" }, [inGame ? "por Manuel Garand" : "Casos procedurales · una única solución garantizada"]),
+          ...(inGame ? [] : [el("p", { class: "brand-sub" }, ["Casos procedurales · una única solución garantizada"])]),
         ]),
       ]),
       el("div", { class: "header-actions" }, actions),
