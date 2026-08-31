@@ -25,7 +25,7 @@
     names: [
       ["Goku", "m"],
       ["Vegeta", "m"],
-      ["Gohan", "m"],
+      ["Lunch", "f"],
       ["Bulma", "f"],
       ["Piccolo", "m"],
       ["Krillin", "m"]
