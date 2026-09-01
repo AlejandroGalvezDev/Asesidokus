@@ -4,14 +4,17 @@
 (function () {
   "use strict";
 
-  const ORDER = ["Goku", "Vegeta", "Lunch", "Bulma", "Piccolo", "Krillin"];
+  const ORDER = ["Goku", "Vegeta", "Lunch", "Bulma", "Piccolo", "Krillin", "Androide 18", "Bobbidi", "Eliza"];
   const PORTRAITS = {
-    Goku: "assets/portraits/dragon-ball/goku.webp",
-    Vegeta: "assets/portraits/dragon-ball/vegeta.webp",
-    Lunch: "assets/portraits/dragon-ball/lunch.webp",
-    Bulma: "assets/portraits/dragon-ball/bulma.webp",
-    Piccolo: "assets/portraits/dragon-ball/piccolo.webp",
-    Krillin: "assets/portraits/dragon-ball/krillin.webp"
+    Goku: "assets/portraits/dragon-ball/goku.png",
+    Vegeta: "assets/portraits/dragon-ball/vegeta.png",
+    Lunch: "assets/portraits/dragon-ball/lunch.png",
+    Bulma: "assets/portraits/dragon-ball/bulma.png",
+    Piccolo: "assets/portraits/dragon-ball/piccolo.png",
+    Krillin: "assets/portraits/dragon-ball/krillin.png",
+    "Androide 18": "assets/portraits/dragon-ball/android-18.png",
+    Bobbidi: "assets/portraits/dragon-ball/bobbidi.png",
+    Eliza: "assets/portraits/dragon-ball/eliza.png"
   };
 
   function isDragonBall() {

@@ -28,7 +28,10 @@
       ["Lunch", "f"],
       ["Bulma", "f"],
       ["Piccolo", "m"],
-      ["Krillin", "m"]
+      ["Krillin", "m"],
+      ["Androide 18", "f"],
+      ["Bobbidi", "m"],
+      ["Eliza", "f"]
     ]
   };
 
