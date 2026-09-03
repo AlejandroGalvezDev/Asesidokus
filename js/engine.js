@@ -254,11 +254,16 @@
   //    hecho) para poder usarlo luego como restricción unaria.
   // ============================================================
   function computeFactCatalog(ctx, personIdx) {
-    const { rows, cols, roomOf, rooms, furniture, adjacencyMode, solution } = ctx;
+    const { rows, cols, roomOf, rooms, furniture, adjacencyMode, solution, victimIdx } = ctx;
     const [r, c] = solution[personIdx];
     const roomId = roomOf[r][c];
     const room = rooms[roomId];
     const facts = [];
+    // tablero completo, reutilizado por los hechos de exclusión/relación
+    // (candidateCells que no restringen nada por sí solos, o que se
+    // filtran a mano a partir de un conjunto excluido)
+    const fullBoard = [];
+    for (let rr = 0; rr < rows; rr++) for (let cc = 0; cc < cols; cc++) fullBoard.push([rr, cc]);
 
     // -- estar en la habitación --
     facts.push({
@@ -338,6 +343,16 @@
             weight: 2,
             candidateCells: spots,
           });
+        } else if (!isNeighbor && f.roomId === roomId) {
+          // -- ausencia: NO estaba junto a este mueble (pista de exclusión) --
+          const neighborCells = neighborsOf(f.r, f.c, rows, cols, adjacencyMode);
+          const excluded = new Set(neighborCells.map(([nr, nc]) => key(nr, nc)));
+          facts.push({
+            type: "not_adjacent",
+            furnitureId: f.id,
+            weight: 1,
+            candidateCells: fullBoard.filter(([rr, cc]) => !excluded.has(key(rr, cc))),
+          });
         }
         if (f.r === r) {
           facts.push({
@@ -359,6 +374,123 @@
             ),
           });
         }
+        // -- misma diagonal que un mueble --
+        const diagDr = r - f.r, diagDc = c - f.c;
+        if (diagDr !== 0 && Math.abs(diagDr) === Math.abs(diagDc)) {
+          const cellsOnDiag = [];
+          if (diagDr === diagDc) {
+            const constVal = f.r - f.c; // diagonal principal: r - c constante
+            for (let rr = 0; rr < rows; rr++) {
+              const cc = rr - constVal;
+              if (cc >= 0 && cc < cols) cellsOnDiag.push([rr, cc]);
+            }
+          } else {
+            const constVal = f.r + f.c; // anti-diagonal: r + c constante
+            for (let rr = 0; rr < rows; rr++) {
+              const cc = constVal - rr;
+              if (cc >= 0 && cc < cols) cellsOnDiag.push([rr, cc]);
+            }
+          }
+          facts.push({
+            type: "same_diag",
+            furnitureId: f.id,
+            weight: 2,
+            candidateCells: cellsOnDiag.filter(([rr, cc]) => !(rr === f.r && cc === f.c)),
+          });
+        }
+      }
+    }
+
+    // -- exclusión: nunca estuvo sobre ningún mueble de este tipo --
+    const occupiableTypeIds = [...new Set(furniture.filter((x) => x.occupiable).map((x) => x.typeId))];
+    for (const typeId of occupiableTypeIds) {
+      const cellsOfType = furniture
+        .filter((x) => x.typeId === typeId && x.occupiable)
+        .map((x) => [x.r, x.c]);
+      const personIsOnType = cellsOfType.some(([tr, tc]) => tr === r && tc === c);
+      if (!personIsOnType) {
+        const excluded = new Set(cellsOfType.map(([tr, tc]) => key(tr, tc)));
+        facts.push({
+          type: "not_on_type",
+          furnitureTypeId: typeId,
+          weight: 1,
+          candidateCells: fullBoard.filter(([rr, cc]) => !excluded.has(key(rr, cc))),
+        });
+      }
+    }
+
+    // -- exclusión: no estaba en tal otra habitación --
+    for (const otherRoom of rooms) {
+      if (otherRoom.id === roomId) continue;
+      facts.push({
+        type: "not_in_room",
+        roomId: otherRoom.id,
+        weight: 1,
+        candidateCells: fullBoard.filter(([rr, cc]) => roomOf[rr][cc] !== otherRoom.id),
+      });
+    }
+
+    // -- relación con otras personas (sospechosos y víctima) --
+    // Estos hechos no tienen un candidateCells propio que los restrinja
+    // (la posición de LA OTRA persona también es una incógnita), así que
+    // aquí se listan con "todo el tablero" como candidateCells (no filtran
+    // nada por sí solos) y es el propio solver (countSolutions, más abajo)
+    // el que valida la relación real una vez que TODAS las posiciones
+    // -incluida la de la víctima- quedan asignadas.
+    for (let other = 0; other < solution.length; other++) {
+      if (other === personIdx) continue;
+      const [orow, ocol] = solution[other];
+      const dr = orow - r;
+      const dc = ocol - c;
+      const otherIsVictim = victimIdx != null && other === victimIdx;
+
+      if (dr !== 0) {
+        facts.push({
+          type: "row_offset_person",
+          refPersonIdx: other,
+          dr,
+          weight: 2,
+          candidateCells: fullBoard,
+        });
+      }
+      if (dc !== 0) {
+        facts.push({
+          type: "col_offset_person",
+          refPersonIdx: other,
+          dc,
+          weight: 2,
+          candidateCells: fullBoard,
+        });
+      }
+      if (dr !== 0 && Math.abs(dr) === Math.abs(dc)) {
+        facts.push({
+          type: "same_diag_person",
+          refPersonIdx: other,
+          weight: 2,
+          candidateCells: fullBoard,
+        });
+      }
+      // "compartía habitación con X" nunca se genera contra la víctima:
+      // su habitación solo tiene sitio para ella y el asesino, así que
+      // esa combinación delataría directamente la solución del caso.
+      if (!otherIsVictim && roomOf[orow][ocol] === roomId) {
+        facts.push({
+          type: "same_room_person",
+          refPersonIdx: other,
+          weight: 2,
+          candidateCells: fullBoard,
+        });
+      }
+      const isNeighborPerson = neighborsOf(r, c, rows, cols, adjacencyMode).some(
+        ([nr, nc]) => nr === orow && nc === ocol
+      );
+      if (!isNeighborPerson) {
+        facts.push({
+          type: "not_adjacent_person",
+          refPersonIdx: other,
+          weight: 1,
+          candidateCells: fullBoard,
+        });
       }
     }
 
@@ -372,7 +504,7 @@
   // ============================================================
   function countSolutions(ctx, revealed, cap) {
     // revealed: array (uno por sospechoso) de arrays de hechos elegidos
-    const { rows, cols, roomOf, blockedSet, suspects, rooms } = ctx;
+    const { rows, cols, roomOf, blockedSet, suspects, rooms, adjacencyMode, victimIdx } = ctx;
     const n = suspects.length; // sospechosos (sin la víctima)
 
     const candSets = suspects.map((sIdx, i) => {
@@ -411,6 +543,75 @@
       });
     });
 
+    // restricciones relacionales persona<->persona (o persona<->víctima):
+    // se comprueban EN CUANTO ambos extremos de la relación están
+    // fijados (normalmente dentro del propio backtracking, para podar
+    // pronto en vez de esperar a tener el tablero entero relleno) y,
+    // como red de seguridad final, las que solo se pueden resolver
+    // contra la víctima se validan al completar la asignación.
+    const RELATIONAL_TYPES = new Set([
+      "row_offset_person", "col_offset_person", "same_diag_person",
+      "same_room_person", "not_adjacent_person",
+    ]);
+    const personIdxToPos = new Map();
+    suspects.forEach((personIdx, i) => personIdxToPos.set(personIdx, i));
+
+    const relationalFacts = [];
+    const relationalByOwnerPos = new Map();
+    const relationalByTargetPos = new Map();
+    revealed.forEach((factList, i) => {
+      (factList || []).forEach((f) => {
+        if (!RELATIONAL_TYPES.has(f.type)) return;
+        const entry = { suspectPos: i, ...f };
+        relationalFacts.push(entry);
+        if (!relationalByOwnerPos.has(i)) relationalByOwnerPos.set(i, []);
+        relationalByOwnerPos.get(i).push(entry);
+        const targetPos = personIdxToPos.get(f.refPersonIdx);
+        if (targetPos != null) {
+          if (!relationalByTargetPos.has(targetPos)) relationalByTargetPos.set(targetPos, []);
+          relationalByTargetPos.get(targetPos).push(entry);
+        }
+      });
+    });
+
+    function relationHolds(rf, mine, other) {
+      const [mr, mc] = mine, [orow, ocol] = other;
+      switch (rf.type) {
+        case "row_offset_person": return (orow - mr) === rf.dr;
+        case "col_offset_person": return (ocol - mc) === rf.dc;
+        case "same_diag_person": return mr !== orow && Math.abs(orow - mr) === Math.abs(ocol - mc);
+        case "same_room_person": return roomOf[mr][mc] === roomOf[orow][ocol];
+        case "not_adjacent_person":
+          return !neighborsOf(mr, mc, rows, cols, adjacencyMode).some(([nr, nc]) => nr === orow && nc === ocol);
+        default: return true;
+      }
+    }
+
+    // al asignar la posición `i`, comprueba toda relación (propia, o de
+    // otro sospechoso ya colocado que apunte a `i`) cuyos DOS extremos
+    // ya estén fijados; en cuanto una falla, se puede descartar la rama
+    // entera sin seguir explorándola.
+    function relationalOkAt(i) {
+      const mine = assign[i];
+      const owned = relationalByOwnerPos.get(i);
+      if (owned) {
+        for (const rf of owned) {
+          const targetPos = personIdxToPos.get(rf.refPersonIdx);
+          if (targetPos == null) continue; // apunta a la víctima: se valida al final
+          const other = assign[targetPos];
+          if (other && !relationHolds(rf, mine, other)) return false;
+        }
+      }
+      const incoming = relationalByTargetPos.get(i);
+      if (incoming) {
+        for (const rf of incoming) {
+          const owner = assign[rf.suspectPos];
+          if (owner && !relationHolds(rf, owner, mine)) return false;
+        }
+      }
+      return true;
+    }
+
     function finalizeAndValidate() {
       // celda restante para la víctima
       let freeRow = -1, freeCol = -1;
@@ -434,6 +635,19 @@
           if (others !== rc.count) return false;
         }
       }
+
+      // las relaciones sospechoso<->sospechoso ya se podaron durante el
+      // backtracking (relationalOkAt); aquí solo falta comprobar las que
+      // apuntan a la víctima, cuya celda solo se conoce al completar todo.
+      if (relationalFacts.length > 0 && victimIdx != null) {
+        const victimCell = [freeRow, freeCol];
+        for (const rf of relationalFacts) {
+          const targetPos = personIdxToPos.get(rf.refPersonIdx);
+          if (targetPos != null) continue; // sospechoso<->sospechoso: ya validado
+          const mine = assign[rf.suspectPos];
+          if (!relationHolds(rf, mine, victimCell)) return false;
+        }
+      }
       return true;
     }
 
@@ -449,7 +663,7 @@
         if (usedRows[r] || usedCols[c]) continue;
         usedRows[r] = usedCols[c] = true;
         assign[i] = [r, c];
-        backtrack(depth + 1);
+        if (relationalOkAt(i)) backtrack(depth + 1);
         usedRows[r] = usedCols[c] = false;
         assign[i] = null;
         if (count >= cap || nodeBudgetRef.n <= 0) return;

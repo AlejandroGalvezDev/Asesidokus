@@ -606,6 +606,16 @@
         roomMembers.set(vRoom, (roomMembers.get(vRoom) || 0) + 1);
       }
 
+      const RELATIONAL_TYPES = new Set([
+        "row_offset_person", "col_offset_person", "same_diag_person",
+        "same_room_person", "not_adjacent_person",
+      ]);
+      const victimPerson = puzzle.people.find((q) => q.isVictim);
+      const cellOfPerson = (personIdx) => {
+        if (victimPerson && personIdx === victimPerson.personIdx) return victimCell;
+        return getPlacements().get(personIdx) || null;
+      };
+
       suspects.forEach((p) => {
         const [r, c] = getPlacements().get(p.personIdx);
         for (const f of p.facts) {
@@ -614,6 +624,27 @@
             const rid = puzzle.roomOf[r][c];
             const others = (roomMembers.get(rid) || 1) - 1;
             ok = others === f.count;
+          }
+          if (RELATIONAL_TYPES.has(f.type)) {
+            const other = cellOfPerson(f.refPersonIdx);
+            if (!other) {
+              ok = false;
+            } else {
+              const [orow, ocol] = other;
+              switch (f.type) {
+                case "row_offset_person": ok = (orow - r) === f.dr; break;
+                case "col_offset_person": ok = (ocol - c) === f.dc; break;
+                case "same_diag_person": ok = r !== orow && Math.abs(orow - r) === Math.abs(ocol - c); break;
+                case "same_room_person": ok = puzzle.roomOf[r][c] === puzzle.roomOf[orow][ocol]; break;
+                case "not_adjacent_person": {
+                  const deltas = M.ADJACENCY[puzzle.adjacencyMode] || M.ADJACENCY.orthogonal;
+                  const isN = deltas.some(([dr, dc]) => r + dr === orow && c + dc === ocol);
+                  ok = !isN;
+                  break;
+                }
+                default: ok = true;
+              }
+            }
           }
           if (!ok) { clueBroken.add(p.personIdx); correct = false; }
         }

@@ -4,7 +4,8 @@
  * Convierte los "hechos" estructurados que genera engine.js en las
  * frases que ve el jugador en la ficha de cada sospechoso. No decide
  * NADA sobre qué pista mostrar (eso ya lo decidió generator.js);
- * solo las traduce a un español natural.
+ * solo las traduce a un español natural, variado y evocador, sin
+ * revelar nunca la solución de forma directa.
  */
 (function (root) {
   "use strict";
@@ -80,7 +81,6 @@
     const art = spanishArticle(name);
     return art === "el" ? `al ${name}` : `a ${art} ${name}`;
   }
-  void aArticle; // reservado por si se necesita fuera de furnitureAfterPrep
 
   // -- Descripción de un mueble concreto (con artículo), con
   //    desambiguación por sala cuando hay más de uno del mismo tipo --
@@ -112,34 +112,177 @@
     const t = puzzle.furniture.find((x) => x.typeId === typeId);
     return t ? withArticle(t.label) : "un mueble";
   }
+  // "ningún/ninguna X" (para pistas de exclusión sobre un tipo de mueble)
+  function noneOfType(puzzle, typeId) {
+    const t = puzzle.furniture.find((x) => x.typeId === typeId);
+    const label = t ? t.label : "mueble";
+    const art = spanishArticle(label);
+    return `${art === "el" ? "ningún" : "ninguna"} ${label}`;
+  }
+
+  // -- Nombre de otra persona (sospechoso o víctima) a partir de su
+  //    personIdx "en crudo" — usado por las pistas relacionales --
+  function personName(puzzle, personIdx) {
+    const p = puzzle.people && puzzle.people.find((x) => x.personIdx === personIdx);
+    return p ? p.name : "otra persona presente en el caso";
+  }
+
+  // -- Selección determinista de una plantilla entre varias -------------
+  // Con la misma semilla de caso, el mismo hecho SIEMPRE produce la misma
+  // frase (para que un código de caso compartido se vea igual al abrirlo),
+  // pero hechos distintos —o casos distintos— varían con naturalidad.
+  function templateChoice(puzzle, seedKey, options) {
+    if (options.length === 1) return options[0];
+    const seed = M.hashStringToSeed(`${puzzle.seed}|${seedKey}`);
+    const rng = M.makeRng(seed);
+    return options[Math.floor(rng() * options.length)];
+  }
+
+  // -- Verbo/acción según el tipo de mueble (por icono, agrupa "mobiliario
+  //    para tumbarse", "para sentarse" y el resto) — aporta variedad de
+  //    tipo "acción o estado" sin inventar datos que no estén en el tema --
+  function actionTemplatesFor(icon) {
+    if (icon === "🛏️") return ["Estaba tumbada/o en {X}.", "Descansaba en {X}.", "Reposaba en {X}."];
+    if (icon === "🪑" || icon === "🛋️") return ["Estaba sentada/o en {X}.", "Ocupaba {X}.", "Se había acomodado en {X}."];
+    return ["Estaba sobre {X}.", "Se encontraba sobre {X}.", "Permanecía sobre {X}."];
+  }
+  function actionUniqueTemplatesFor(icon) {
+    if (icon === "🛏️") return ["tumbada/o en", "descansando en"];
+    if (icon === "🪑" || icon === "🛋️") return ["sentada/o en", "acomodada/o en"];
+    return ["sobre", "junto a"];
+  }
+
+  function pluralize(word, n) {
+    return n === 1 ? word : `${word}s`;
+  }
 
   // -- Un hecho -> una frase --------------------------------------------
   function factSentence(puzzle, fact) {
     const roomName = fact.roomId != null ? puzzle.roomNameById[fact.roomId] : null;
+    const seedKey = `${fact.type}:${fact.furnitureId ?? ""}:${fact.roomId ?? ""}:${fact.count ?? ""}:${fact.refPersonIdx ?? ""}:${fact.dr ?? ""}:${fact.dc ?? ""}:${fact.furnitureTypeId ?? ""}`;
+    const pick = (options) => templateChoice(puzzle, seedKey, options);
+
     switch (fact.type) {
+      // -- Ubicación concreta --------------------------------------
       case "room":
-        return `Estaba en ${withArticle(roomName)}.`;
+        return pick([
+          `Estaba en ${withArticle(roomName)}.`,
+          `Se encontraba en ${withArticle(roomName)}.`,
+          `La situaban en ${withArticle(roomName)} en el momento de los hechos.`,
+        ]);
       case "corner":
-        return `Estaba en una esquina ${deArticle(roomName)}.`;
+        return pick([
+          `Estaba en una esquina ${deArticle(roomName)}.`,
+          `Se había quedado en un rincón ${deArticle(roomName)}.`,
+        ]);
       case "room_count":
-        if (fact.count === 0) return `Estaba solo/a en ${withArticle(roomName)}.`;
+        if (fact.count === 0) {
+          return pick([
+            `Estaba solo/a en ${withArticle(roomName)}.`,
+            `Nadie más la/lo acompañaba en ${withArticle(roomName)}.`,
+          ]);
+        }
         if (fact.count === 1) return `Estaba en ${withArticle(roomName)} con otra persona.`;
         return `Estaba en ${withArticle(roomName)} con otras ${numberWord(fact.count)} personas.`;
+
+      // -- Objeto / superficie + acción o estado --------------------
       case "adjacent": {
         if (puzzle.adjacencyMode === "knight") {
           return `Estaba a un movimiento de caballo de ajedrez ${furnitureAfterPrep(puzzle, fact.furnitureId, "de")}.`;
         }
         const suffix = puzzle.adjacencyMode === "diagonal8" ? " (aquí también cuentan las diagonales)" : "";
-        return `Estaba junto ${furnitureAfterPrep(puzzle, fact.furnitureId, "a")}${suffix}.`;
+        return pick([
+          `Estaba junto ${furnitureAfterPrep(puzzle, fact.furnitureId, "a")}${suffix}.`,
+          `Se encontraba al lado ${furnitureAfterPrep(puzzle, fact.furnitureId, "de")}${suffix}.`,
+        ]);
       }
-      case "on":
-        return `Estaba sobre ${describeFurniture(puzzle, fact.furnitureId)}.`;
-      case "on_unique":
-        return `Era la única persona de todo el caso sobre ${describeFurnitureType(puzzle, puzzle.furniture.find(f=>f.id===fact.furnitureId).typeId)}.`;
+      case "on": {
+        const f = puzzle.furniture.find((x) => x.id === fact.furnitureId);
+        const templates = actionTemplatesFor(f ? f.icon : "");
+        return pick(templates).replace("{X}", describeFurniture(puzzle, fact.furnitureId));
+      }
+      case "on_unique": {
+        const f = puzzle.furniture.find((x) => x.id === fact.furnitureId);
+        const typeId = f ? f.typeId : null;
+        const verb = pick(actionUniqueTemplatesFor(f ? f.icon : ""));
+        return pick([
+          `Era la única persona de todo el caso ${verb} ${describeFurnitureType(puzzle, typeId)}.`,
+          `Nadie más en todo el caso estaba ${verb} ${describeFurnitureType(puzzle, typeId)}.`,
+        ]);
+      }
+
+      // -- Posición relativa / diagonal-columna, respecto a un mueble --
       case "same_row":
-        return `Estaba en la misma fila que ${describeFurniture(puzzle, fact.furnitureId)}.`;
+        return pick([
+          `Estaba en la misma fila que ${describeFurniture(puzzle, fact.furnitureId)}.`,
+          `Compartía fila con ${describeFurniture(puzzle, fact.furnitureId)}.`,
+        ]);
       case "same_col":
-        return `Estaba en la misma columna que ${describeFurniture(puzzle, fact.furnitureId)}.`;
+        return pick([
+          `Estaba en la misma columna que ${describeFurniture(puzzle, fact.furnitureId)}.`,
+          `Compartía columna con ${describeFurniture(puzzle, fact.furnitureId)}.`,
+        ]);
+      case "same_diag":
+        return pick([
+          `Estaba en la misma diagonal que ${describeFurniture(puzzle, fact.furnitureId)}.`,
+          `Quedaba alineada/o en diagonal con ${describeFurniture(puzzle, fact.furnitureId)}.`,
+        ]);
+
+      // -- Exclusión ---------------------------------------------------
+      case "not_adjacent":
+        return pick([
+          `No estaba junto ${furnitureAfterPrep(puzzle, fact.furnitureId, "a")}.`,
+          `No se encontraba cerca ${furnitureAfterPrep(puzzle, fact.furnitureId, "de")}.`,
+        ]);
+      case "not_in_room":
+        return pick([
+          `No estaba en ${withArticle(puzzle.roomNameById[fact.roomId])}.`,
+          `No fue vista/o en ${withArticle(puzzle.roomNameById[fact.roomId])}.`,
+          `Se puede descartar ${withArticle(puzzle.roomNameById[fact.roomId])} en su caso.`,
+        ]);
+      case "not_on_type":
+        return pick([
+          `No estaba sobre ${noneOfType(puzzle, fact.furnitureTypeId)}.`,
+          `No se la/lo vio sobre ${noneOfType(puzzle, fact.furnitureTypeId)}.`,
+        ]);
+
+      // -- Compañía / relación entre personajes ------------------------
+      case "same_room_person":
+        return pick([
+          `Compartía habitación con ${personName(puzzle, fact.refPersonIdx)}.`,
+          `Estaba en la misma sala que ${personName(puzzle, fact.refPersonIdx)}.`,
+        ]);
+      case "not_adjacent_person":
+        return pick([
+          `No estaba junto a ${personName(puzzle, fact.refPersonIdx)}.`,
+          `No se encontraba cerca de ${personName(puzzle, fact.refPersonIdx)}.`,
+        ]);
+      case "same_diag_person":
+        return pick([
+          `Estaba en la misma diagonal que ${personName(puzzle, fact.refPersonIdx)}.`,
+          `Compartía diagonal con ${personName(puzzle, fact.refPersonIdx)}.`,
+        ]);
+      case "row_offset_person": {
+        const dir = fact.dr > 0 ? "norte" : "sur";
+        const mag = Math.abs(fact.dr);
+        const magWord = numberWord(mag);
+        const filaWord = pluralize("fila", mag);
+        return pick([
+          `Estaba ${magWord} ${filaWord} al ${dir} de ${personName(puzzle, fact.refPersonIdx)}.`,
+          `A ${magWord} ${filaWord} al ${dir} de ${personName(puzzle, fact.refPersonIdx)}, ahí estaba.`,
+        ]);
+      }
+      case "col_offset_person": {
+        const dir = fact.dc > 0 ? "oeste" : "este";
+        const mag = Math.abs(fact.dc);
+        const magWord = numberWord(mag);
+        const colWord = pluralize("columna", mag);
+        return pick([
+          `Estaba ${magWord} ${colWord} al ${dir} de ${personName(puzzle, fact.refPersonIdx)}.`,
+          `A ${magWord} ${colWord} al ${dir} de ${personName(puzzle, fact.refPersonIdx)}, ahí estaba.`,
+        ]);
+      }
+
       default:
         return "";
     }
@@ -153,12 +296,13 @@
   function clueTextFor(puzzle, person) {
     if (person.isVictim) return "Fue hallada/o en la última posición restante, tras ubicar a todos los demás.";
     if (!person.facts || person.facts.length === 0) return "Sin pista directa: se deduce por eliminación.";
-    return person.facts.map((f) => factSentence(puzzle, f)).join(" ");
+    return person.facts.map((f) => factSentence(puzzle, f)).filter(Boolean).join(" ");
   }
 
   M.describeFurniture = describeFurniture;
   M.clueTextFor = clueTextFor;
   M.factSentence = factSentence;
+  void aArticle; // reservado por si se necesita fuera de furnitureAfterPrep
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = M;

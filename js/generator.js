@@ -77,28 +77,54 @@
   // y luego intenta podar pistas redundantes para que quede
   // elegante en vez de sobrecargado.
   // ------------------------------------------------------------
-  const FACT_PRIORITY = ["room", "adjacent", "corner", "same_row", "same_col", "on", "on_unique", "room_count"];
+  const FACT_PRIORITY = [
+    "room", "adjacent", "same_room_person", "corner",
+    "row_offset_person", "col_offset_person", "same_diag_person",
+    "same_row", "same_col", "same_diag",
+    "not_adjacent_person", "not_adjacent", "not_in_room", "not_on_type",
+    "on", "on_unique", "room_count",
+  ];
+
+  // tipos de pista "de exclusión" (ausencia) y "relacionales" (comparan a
+  // dos personajes entre sí) — usados solo para garantizar variedad mínima
+  // en selectClues(), ver forceQuota() más abajo.
+  const EXCLUSION_TYPES = new Set(["not_in_room", "not_adjacent", "not_on_type", "not_adjacent_person"]);
+  const RELATIONAL_TYPES = new Set([
+    "row_offset_person", "col_offset_person", "same_diag_person",
+    "same_room_person", "not_adjacent_person",
+  ]);
 
   function factSortKey(f) {
     const idx = FACT_PRIORITY.indexOf(f.type);
     return idx === -1 ? 99 : idx;
   }
 
-  function selectClues(rng, ctx, solution, suspectOrder, cap) {
+  function selectClues(rng, ctx, solution, suspectOrder, victimIdx, cap) {
     const n = solution.length;
     const catalogs = suspectOrder.map((personIdx) => M.computeFactCatalog(
-      { ...ctx, solution }, personIdx
+      { ...ctx, solution, victimIdx }, personIdx
     ));
 
     const revealed = suspectOrder.map(() => []);
     const usedFactKeys = suspectOrder.map(() => new Set());
 
     function factIdOf(f) {
-      return f.type + ":" + (f.furnitureId ?? "") + ":" + (f.roomId ?? "") + ":" + (f.count ?? "");
+      return [
+        f.type,
+        f.furnitureId ?? "",
+        f.roomId ?? "",
+        f.count ?? "",
+        f.refPersonIdx ?? "",
+        f.dr ?? "",
+        f.dc ?? "",
+        f.furnitureTypeId ?? "",
+      ].join(":");
     }
 
     function tryAddFact(i) {
-      const catalog = M.shuffled(rng, catalogs[i]).sort((a, b) => factSortKey(a) - factSortKey(b));
+      const catalog = M.shuffled(rng, catalogs[i])
+        .filter((f) => !RELATIONAL_TYPES.has(f.type) && f.type !== "not_in_room")
+        .sort((a, b) => factSortKey(a) - factSortKey(b));
       for (const f of catalog) {
         const id = factIdOf(f);
         if (usedFactKeys[i].has(id)) continue;
@@ -112,7 +138,7 @@
     // 1) una pista base para cada sospechoso (si es posible)
     for (let i = 0; i < suspectOrder.length; i++) tryAddFact(i);
 
-    const solverCtx = { ...ctx, suspects: suspectOrder };
+    const solverCtx = { ...ctx, suspects: suspectOrder, victimIdx };
 
     let guard = 0;
     const SOFT_CAP = 4;
@@ -168,13 +194,61 @@
       }
     }
 
-    return { revealed, solved };
+    // foto de las pistas estrictamente necesarias para la unicidad, ANTES
+    // de añadir la cuota de variedad: esas pistas extra solo AYUDAN al
+    // jugador (nunca lo obligan a razonar más), así que no deben inflar
+    // la dificultad — se calcula sobre esta foto, no sobre `revealed`.
+    const revealedForDifficulty = revealed.map((list) => list.slice());
+
+    // 3) cuota de variedad: garantiza al menos unas cuantas pistas de
+    //    exclusión ("no estaba junto a...", "no estaba en...") y unas
+    //    cuantas que relacionen a dos personajes entre sí ("N filas al
+    //    norte de X", "compartía sala con Y"...). Añadir hechos aquí es
+    //    SIEMPRE seguro: todo hecho del catálogo es una afirmación cierta
+    //    sobre la solución real, así que sumar más nunca puede romper la
+    //    unicidad ya conseguida (como mucho, la deja exactamente igual).
+    if (solved) {
+      const countByCategory = (typeSet) =>
+        revealed.reduce((sum, list) => sum + list.filter((f) => typeSet.has(f.type)).length, 0);
+
+      const forceQuota = (typeSet, minCount, hardCapPerSuspect) => {
+        let guard = 0;
+        while (countByCategory(typeSet) < minCount && guard++ < 60) {
+          const byLoad = suspectOrder
+            .map((_, i) => i)
+            .filter((i) => revealed[i].length < hardCapPerSuspect)
+            .sort((a, b) => {
+              const ca = revealed[a].filter((f) => typeSet.has(f.type)).length;
+              const cb = revealed[b].filter((f) => typeSet.has(f.type)).length;
+              return ca - cb || rng() - 0.5;
+            });
+          let added = false;
+          for (const i of byLoad) {
+            const candidate = M.shuffled(rng, catalogs[i]).find(
+              (f) => typeSet.has(f.type) && !usedFactKeys[i].has(factIdOf(f))
+            );
+            if (candidate) {
+              usedFactKeys[i].add(factIdOf(candidate));
+              revealed[i].push(candidate);
+              added = true;
+              break;
+            }
+          }
+          if (!added) break; // no quedan más hechos de esta categoría en todo el caso
+        }
+      };
+
+      forceQuota(EXCLUSION_TYPES, 3, 6);
+      forceQuota(RELATIONAL_TYPES, 2, 6);
+    }
+
+    return { revealed, solved, revealedForDifficulty };
   }
 
   function difficultyLabel(n, revealed) {
     const totalFacts = revealed.reduce((s, f) => s + f.length, 0);
     const heavy = revealed.filter((f) => f.some((x) => x.type === "room_count" && x.count > 0)).length;
-    const score = (n - 5) * 3 + totalFacts * 0.4 + heavy * 1.0;
+    const score = (n - 5) * 3 + totalFacts * 0.28 + heavy * 1.0;
     if (score < 6) return { key: "facil", label: "Fácil", stars: 1 };
     if (score < 10) return { key: "media", label: "Media", stars: 2 };
     if (score < 14) return { key: "dificil", label: "Difícil", stars: 3 };
@@ -198,13 +272,15 @@
     const n_ = solution.length;
     const suspectOrder = M.shuffled(rng, Array.from({ length: n_ }, (_, i) => i).filter((i) => i !== victimIdx));
 
-    const { revealed, solved } = selectClues(rng, ctx, solution, suspectOrder, 2);
+    const { revealed, solved, revealedForDifficulty } = selectClues(rng, ctx, solution, suspectOrder, victimIdx, 2);
     if (!solved) {
       // reintenta el caso completo con otra tirada si no se pudo cerrar
       return generatePuzzle(theme, difficultyKey, (seed + 1013904223) >>> 0);
     }
 
-    const difficulty = difficultyLabel(n_, revealed);
+    // la dificultad se mide sobre las pistas estrictamente necesarias,
+    // no sobre las de variedad añadidas después (esas solo ayudan)
+    const difficulty = difficultyLabel(n_, revealedForDifficulty);
 
     // -------- adjuntar contenido narrativo del tema (nombres) --------
     const roomNamePool = M.shuffled(rng, theme.rooms);
