@@ -43,6 +43,8 @@
     return PORTRAIT_ASSETS[Math.abs(personIdx) % PORTRAIT_ASSETS.length];
   }
   function furnitureAssetFor(furniture) {
+    // si el tema define una imagen específica para este tipo, usarla directamente
+    if (furniture.image) return furniture.image;
     const label = String(furniture.label || "").toLowerCase();
     const exact = FURNITURE_ASSETS[label];
     if (exact) return exact;

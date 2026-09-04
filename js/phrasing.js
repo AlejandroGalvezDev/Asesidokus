@@ -47,6 +47,10 @@
     bandera: "la", trono: "el", yacija: "la", armadura: "la", estandarte: "el",
     brasero: "el", antorcha: "la", campana: "la", neumático: "el", monitor: "el",
     zamboni: "la",
+    // Dragon Ball
+    nube: "la", bola: "la", radar: "el", nave: "la", anillos: "los",
+    capsule: "la", dende: "el", arale: "la", ulong: "el",
+    // "Tao Pai Pai" → primera palabra "tao", heurística → "el" (correcto)
   };
 
   function normalize(w) {
@@ -144,11 +148,19 @@
   function actionTemplatesFor(icon) {
     if (icon === "🛏️") return ["Estaba tumbada/o en {X}.", "Descansaba en {X}.", "Reposaba en {X}."];
     if (icon === "🪑" || icon === "🛋️") return ["Estaba sentada/o en {X}.", "Ocupaba {X}.", "Se había acomodado en {X}."];
+    if (icon === "☁️") return ["Volaba sobre {X}.", "Surcaba el cielo en {X}.", "Se desplazaba en {X}."];
+    if (icon === "🚀" || icon === "🛸") return ["Viajaba a bordo de {X}.", "Estaba dentro de {X}.", "Se encontraba en {X}."];
+    if (icon === "📡") return ["Manejaba {X}.", "Rastreaba las bolas con {X}.", "Estaba junto a {X}."];
+    if (icon === "💍") return ["Llevaba {X}.", "Portaba {X}.", "Sostenía {X}."];
     return ["Estaba sobre {X}.", "Se encontraba sobre {X}.", "Permanecía sobre {X}."];
   }
   function actionUniqueTemplatesFor(icon) {
     if (icon === "🛏️") return ["tumbada/o en", "descansando en"];
     if (icon === "🪑" || icon === "🛋️") return ["sentada/o en", "acomodada/o en"];
+    if (icon === "☁️") return ["volando en", "surcando el cielo en"];
+    if (icon === "🚀" || icon === "🛸") return ["a bordo de", "viajando en"];
+    if (icon === "📡") return ["manejando", "rastreando con"];
+    if (icon === "💍") return ["portando", "llevando"];
     return ["sobre", "junto a"];
   }
 

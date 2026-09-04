@@ -169,13 +169,20 @@
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([r, c]);
     const order = shuffled(rng, cells);
 
+    // índice nombre-de-habitación para filtrar por roomIds
+    const roomNameById = {};
+    rooms.forEach((room) => { roomNameById[room.id] = room.name; });
+
+    // cuántas instancias se han colocado de cada typeId
+    const typeCount = new Map();
+
     // reparte el mobiliario intentando cubrir varias habitaciones
     const perRoomCount = new Map();
     const furniture = [];
     const used = new Set();
     let idx = 0;
     let attempts = 0;
-    while (furniture.length < count && attempts < order.length) {
+    while (furniture.length < count && attempts < order.length * 2) {
       const [r, c] = order[idx % order.length];
       idx++;
       attempts++;
@@ -188,11 +195,36 @@
       const maxForRoom = Math.max(1, Math.floor(room.cells.length / 3));
       if (already >= maxForRoom && furniture.length < count - 1) continue;
 
-      const type = choice(rng, furnitureTypes);
+      // filtrar tipos compatibles con esta celda:
+      //   1. no han superado su límite de instancias (maxCount, por defecto 1)
+      //   2. si pertenecen a un grupo con maxPerGroup, el grupo no está lleno
+      //   3. si definen roomIds, esta habitación debe estar entre ellos
+      // Calcular groupCount a partir del typeCount actual en este momento
+      const groupCountNow = new Map();
+      for (const [tid, cnt] of typeCount.entries()) {
+        const ft = furnitureTypes.find((x) => x.id === tid);
+        if (ft && ft.group) groupCountNow.set(ft.group, (groupCountNow.get(ft.group) || 0) + cnt);
+      }
+      const compatible = furnitureTypes.filter((t) => {
+        const maxC = (t.maxCount != null && t.maxCount > 1) ? t.maxCount : 1;
+        if ((typeCount.get(t.id) || 0) >= maxC) return false;
+        if (t.group && t.maxPerGroup != null) {
+          if ((groupCountNow.get(t.group) || 0) >= t.maxPerGroup) return false;
+        }
+        if (Array.isArray(t.roomIds) && t.roomIds.length > 0) {
+          return t.roomIds.includes(roomNameById[roomId]);
+        }
+        return true;
+      });
+      if (compatible.length === 0) continue;
+
+      const type = choice(rng, compatible);
+      typeCount.set(type.id, (typeCount.get(type.id) || 0) + 1);
       furniture.push({
         id: furniture.length,
         typeId: type.id,
         occupiable: !!type.occupiable,
+        image: type.image || null,   // ruta de imagen específica del tema
         r, c,
         roomId,
       });
