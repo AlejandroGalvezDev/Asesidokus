@@ -24,7 +24,7 @@
     name: "Dragon Ball — El Misterio de las Siete Bolas",
     tagline: "Una reunión de guerreros termina en tragedia antes de invocar al dragón.",
     intro: "Los Guerreros Z se reunieron para proteger las siete Bolas de Dragón, pero uno de ellos apareció sin vida. Reconstruye dónde estaba cada personaje en el momento del crimen y descubre quién compartía escenario con la víctima.",
-    rooms: ["Casa Kame", "Sala del Tiempo", "Torneo de Artes Marciales", "Capsule Corp.", "Planeta Namek", "Nave Saiyajin"],
+    rooms: ["Casa Kame", "Sala del Tiempo", "Torneo de Artes Marciales", "laboratorio Capsule Corp.", "Planeta Namek", "Nave Saiyajin"],
 
     furniture: [
       // ── Nube Kintón ────────────────────────────────────────────────────
