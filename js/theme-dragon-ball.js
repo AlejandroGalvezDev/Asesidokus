@@ -60,10 +60,10 @@
         maxCount: 4,
       }),
 
-      // ── Nave Saiyajin ──────────────────────────────────────────────────
+      // ── Nave Goku ──────────────────────────────────────────────────────
       // Repetible (hasta 3). occupiable. Sin restricción de sala.
-      F("nave_saiyajin", "Nave Saiyajin", "🚀", true, {
-        image: IMG + "nave saiyajin.png",
+      F("nave_saiyajin", "Nave Goku", "🚀", true, {
+        image: IMG + "nave goku.png",
         maxCount: 3,
       }),
 

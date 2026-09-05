@@ -49,6 +49,8 @@
     zamboni: "la",
     // Dragon Ball
     nube: "la", bola: "la", radar: "el", nave: "la", anillos: "los",
+    // Dragon Ball — objetos específicos para asegurar artículo correcto
+    "nave goku": "la", "nave de trunks": "la",
     capsule: "la", dende: "el", arale: "la", ulong: "el",
     // "Tao Pai Pai" → primera palabra "tao", heurística → "el" (correcto)
   };
