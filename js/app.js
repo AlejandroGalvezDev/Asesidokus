@@ -460,6 +460,7 @@
       const cy = ((room.bounds.r0 + room.bounds.r1 + 1) / 2) / puzzle.n * 100;
       labelLayer.appendChild(el("span", {
         class: "room-label",
+        "data-room": room.id,
         style: `left:${cx}%; top:${cy}%;`,
       }, [room.name]));
     });

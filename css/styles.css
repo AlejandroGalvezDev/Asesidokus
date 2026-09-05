@@ -1112,6 +1112,44 @@ footer.app-footer a { color: var(--accent-red-dim); font-weight: 700; }
   font-size: clamp(14px, 2.3vw, 25px);
 }
 .play-shell .cell:nth-child(odd) { background: #eadfc6; }
+
+/* Cada habitación recibe un suelo propio: el patrón es sutil para conservar la legibilidad. */
+.play-shell .cell[data-room="0"] {
+  background-color: #f3e5c3;
+  background-image: linear-gradient(45deg, rgba(255,255,255,.28) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.28) 75%);
+  background-size: 16px 16px;
+}
+.play-shell .cell[data-room="1"] {
+  background-color: #e5e0f4;
+  background-image: repeating-linear-gradient(135deg, rgba(91,77,147,.12) 0 6px, transparent 6px 12px);
+}
+.play-shell .cell[data-room="2"] {
+  background-color: #d9eeee;
+  background-image: radial-gradient(rgba(31,129,130,.24) 1px, transparent 1.5px);
+  background-size: 12px 12px;
+}
+.play-shell .cell[data-room="3"] {
+  background-color: #f2ddd4;
+  background-image: linear-gradient(rgba(181,92,68,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(181,92,68,.14) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.play-shell .cell[data-room="4"] {
+  background-color: #dfeedd;
+  background-image: repeating-linear-gradient(45deg, rgba(67,125,78,.13) 0 5px, transparent 5px 11px);
+}
+.play-shell .cell[data-room="5"] {
+  background-color: #d9e7f5;
+  background-image: radial-gradient(ellipse at 50% 0, rgba(48,102,157,.18), transparent 62%);
+}
+.play-shell .cell[data-room="6"] {
+  background-color: #eee0f1;
+  background-image: linear-gradient(90deg, rgba(123,72,137,.12) 1px, transparent 1px), linear-gradient(rgba(123,72,137,.12) 1px, transparent 1px);
+  background-size: 13px 13px;
+}
+.play-shell .cell[data-room="7"] {
+  background-color: #f0e5d5;
+  background-image: repeating-linear-gradient(0deg, rgba(145,98,47,.13) 0 3px, transparent 3px 9px);
+}
 .play-shell .cell:hover { background: #c7eeee; }
 .play-shell .cell.room-edge-top,
 .play-shell .cell.room-edge-bottom,
@@ -1164,6 +1202,14 @@ footer.app-footer a { color: var(--accent-red-dim); font-weight: 700; }
   letter-spacing: .3px;
   text-transform: uppercase;
 }
+.play-shell .room-label[data-room="0"] { border-left: 4px solid #c49a42; }
+.play-shell .room-label[data-room="1"] { border-left: 4px solid #7563b2; }
+.play-shell .room-label[data-room="2"] { border-left: 4px solid #2b9b9c; }
+.play-shell .room-label[data-room="3"] { border-left: 4px solid #b55c44; }
+.play-shell .room-label[data-room="4"] { border-left: 4px solid #4f9554; }
+.play-shell .room-label[data-room="5"] { border-left: 4px solid #3978b4; }
+.play-shell .room-label[data-room="6"] { border-left: 4px solid #8a4b98; }
+.play-shell .room-label[data-room="7"] { border-left: 4px solid #996a35; }
 .play-shell .legend {
   width: min(100%, 720px);
   margin-top: 17px;
