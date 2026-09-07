@@ -141,10 +141,12 @@
       F("botiquin", "botiquín", "🩹", false),
       F("marcador", "marcador", "📟", false),
     ],
+    // Personajes de Captain Tsubasa asociados uno a uno a los retratos de assets/portraits/futbol.
+    // Hay once nombres porque cada caso usa diez jugadores y una víctima.
     names: [
-      ["Tomás", "m"], ["Facu", "m"], ["Rocío", "f"], ["Bruno", "m"], ["Alma", "f"],
-      ["Ezequiel", "m"], ["Milagros", "f"], ["Franco", "m"], ["Camila", "f"], ["Ignacio", "m"],
-      ["Julieta", "f"], ["Maxi", "m"],
+      ["Oliver Atom", "m"], ["Benji Price", "m"], ["Mark Lenders", "m"], ["Bruce Harper", "m"],
+      ["Ed Warner", "m"], ["Karl-Heinz Schneider", "m"], ["Carlos Santana", "m"], ["Danny Mellow", "m"],
+      ["Phillip Callahan", "m"], ["Ted Carter", "m"], ["Rivaul", "m"],
     ],
   });
 

@@ -26,6 +26,19 @@
     "assets/portraits/portrait-05.png",
     "assets/portraits/reference_portrait.png",
   ];
+  const FUTBOL_PORTRAITS = {
+    "Benji Price": "assets/portraits/futbol/benji-price.jpg",
+    "Bruce Harper": "assets/portraits/futbol/bruce-harper.jpg",
+    "Carlos Santana": "assets/portraits/futbol/carlos-santana.jpg",
+    "Danny Mellow": "assets/portraits/futbol/danny-mellow.jpg",
+    "Ed Warner": "assets/portraits/futbol/ed-warner.jpg",
+    "Karl-Heinz Schneider": "assets/portraits/futbol/karl-heinz-schneider.jpg",
+    "Mark Lenders": "assets/portraits/futbol/mark-lenders.jpg",
+    "Oliver Atom": "assets/portraits/futbol/oliver-atom.jpg",
+    "Phillip Callahan": "assets/portraits/futbol/phillip-callahan.jpg",
+    Rivaul: "assets/portraits/futbol/rivaul.png",
+    "Ted Carter": "assets/portraits/futbol/ted-carter.jpg",
+  };
   const FURNITURE_ASSETS = {
     cama: "assets/furniture/bed.png",
     hamaca: "assets/furniture/bed.png",
@@ -39,8 +52,11 @@
     sofa: "assets/furniture/reference_furniture.png",
   };
 
-  function portraitFor(personIdx) {
-    return PORTRAIT_ASSETS[Math.abs(personIdx) % PORTRAIT_ASSETS.length];
+  function portraitFor(themeId, person) {
+    if (themeId === "futbol" && FUTBOL_PORTRAITS[person.name]) {
+      return FUTBOL_PORTRAITS[person.name];
+    }
+    return PORTRAIT_ASSETS[Math.abs(person.personIdx) % PORTRAIT_ASSETS.length];
   }
   function furnitureAssetFor(furniture) {
     // si el tema define una imagen específica para este tipo, usarla directamente
@@ -372,7 +388,7 @@
       onclick: () => onArmSuspect(person.personIdx),
     }, [
       el("div", { class: "suspect-portrait" }, [
-        el("img", { src: portraitFor(person.personIdx), alt: `Retrato de ${person.name}`, loading: "lazy" }),
+        el("img", { src: portraitFor(puzzle.themeId, person), alt: `Retrato de ${person.name}`, loading: "lazy" }),
         el("span", { class: "gender-badge", "aria-label": person.gender === "f" ? "Mujer" : "Hombre" }, [person.gender === "f" ? "♀" : "♂"]),
       ]),
       el("div", { class: "suspect-info" }, [
@@ -388,7 +404,7 @@
   function victimCard(puzzle, victim) {
     return el("div", { class: "suspect-card victim-card", style: "cursor:default; --tilt:1deg", "data-gender": victim.gender || "" }, [
       el("div", { class: "suspect-portrait" }, [
-        el("img", { src: portraitFor(victim.personIdx), alt: `Retrato de ${victim.name}`, loading: "lazy" }),
+        el("img", { src: portraitFor(puzzle.themeId, victim), alt: `Retrato de ${victim.name}`, loading: "lazy" }),
         el("span", { class: "gender-badge", "aria-label": victim.gender === "f" ? "Mujer" : "Hombre" }, [victim.gender === "f" ? "♀" : "♂"]),
       ]),
       el("div", { class: "suspect-info" }, [
