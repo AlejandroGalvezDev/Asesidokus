@@ -14,7 +14,7 @@
     clasico: "🔎", sendero: "🥾", faro: "🗼", cena: "🍽️", futbol: "⚽",
     vecindario: "🏘️", estrella: "🌌", oficina: "🏢", hockey: "🏒",
     pirata: "🏴‍☠️", doble_a: "🏚️", doble_b: "🏚️", batalla_estrellas: "✦",
-    caballeros: "♞", asedio: "🏰", formula1: "🏎️",
+    caballeros: "♞", asedio: "🏰", formula1: "🏎️", simpsons: "🌴",
   };
   const ADJ_BADGE = { diagonal8: "Regla especial: diagonales", knight: "Regla especial: movimiento de caballo" };
 
@@ -55,6 +55,10 @@
   function portraitFor(themeId, person) {
     if (themeId === "futbol" && FUTBOL_PORTRAITS[person.name]) {
       return FUTBOL_PORTRAITS[person.name];
+    }
+    const theme = M.THEME_BY_ID[themeId];
+    if (theme && theme.portraits && theme.portraits[person.name]) {
+      return theme.portraits[person.name];
     }
     return PORTRAIT_ASSETS[Math.abs(person.personIdx) % PORTRAIT_ASSETS.length];
   }

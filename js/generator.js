@@ -295,7 +295,7 @@
     theme.furniture.forEach((t) => (furnitureTypeById[t.id] = t));
     const namedFurniture = ctx.furniture.map((f) => {
       const t = furnitureTypeById[f.typeId] || { label: f.typeId, icon: "❔" };
-      return { ...f, label: t.label, icon: t.icon };
+      return { ...f, label: t.label, icon: t.icon, image: t.image };
     });
 
     const needed = n_;
