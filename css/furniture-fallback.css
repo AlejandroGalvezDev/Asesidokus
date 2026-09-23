@@ -1,0 +1,34 @@
+/* Estilos para emojis fallback de muebles */
+
+.furniture-emoji-fallback {
+  display: inline-block;
+  font-size: 2em;
+  text-align: center;
+  vertical-align: middle;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 40px;
+  min-width: 40px;
+}
+
+/* Asegura que los emojis se muestren bien en diferentes contextos */
+.furniture-emoji-fallback {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* En celdas de tablero */
+td .furniture-emoji-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8em;
+}
+
+/* En contenedores de objetos */
+.object-container .furniture-emoji-fallback {
+  font-size: 2.5em;
+}
