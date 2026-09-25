@@ -14,7 +14,7 @@
     clasico: "🔎", sendero: "🥾", faro: "🗼", cena: "🍽️", futbol: "⚽",
     vecindario: "🏘️", estrella: "🌌", oficina: "🏢", hockey: "🏒",
     pirata: "🏴‍☠️", doble_a: "🏚️", doble_b: "🏚️", batalla_estrellas: "✦",
-    caballeros: "♞", asedio: "🏰", formula1: "🏎️", simpsons: "🌴",
+    caballeros: "♞", asedio: "🏰", formula1: "🏎️", simpsons: "🌴", harry_potter: "⚡",
   };
   const ADJ_BADGE = { diagonal8: "Regla especial: diagonales", knight: "Regla especial: movimiento de caballo" };
 
